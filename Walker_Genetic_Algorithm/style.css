@@ -1,0 +1,20 @@
+#sketch {
+     height: 100%;
+     margin: 100;
+     display: flex;
+
+     justify-content: center;
+
+     align-items: center;
+}
+
+#head {
+     font-family: "Courier";
+     font-size: 45px;
+     text-align: center;
+}
+
+#stats {
+     font-family: "Courier";
+     font-size: 20px;
+}
