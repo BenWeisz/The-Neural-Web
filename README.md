@@ -1,5 +1,7 @@
-AI List
-========
+---
+layout: page
+title: Ai List
+---
 
 |-----------------+-----------------+----------+----------+----------------|
 |     __Name__    | __Description__ | __Type__ | __Link__ | __Date Added__ |
