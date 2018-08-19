@@ -5,7 +5,7 @@ function preload(){
 }
 
 function setup() {
-     alert(data[0]);
+     console.log(data);
 }
 
 function draw() {
