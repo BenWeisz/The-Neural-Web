@@ -4,8 +4,9 @@ class NeuralNetBase{
           this.m_f = null;
           this.m_f_prime = null;
           this.m_layers = [];
+          this.read_pointer = 0;
 
-          for (let i = 0; i < schematic.dim(); i++){
+          for (let i = 1; i < schematic.dim(); i++){
                let layer = new JSMatrix(schematic.get(i), schematic.get(i - 1) + 1);
                layer = layer.randomize(-1, 1);
 
@@ -32,6 +33,48 @@ class NeuralNetBase{
           }
 
           return output;
+     }
+
+     read_data_line(data){
+          let out = data[this.read_pointer];
+          this.read_pointer++;
+
+          return out;
+     }
+
+     load(data){
+          let schematic = this.read_data_line(data).split(' ');
+          schematic.splice(schematic.length - 1, 1);
+
+          for (let i = 0; i < schematic.length; i++){
+               schematic[i] = parseInt(schematic[i]);
+          }
+
+          let layers = [];
+
+          for (let i = 0; i < schematic.length - 1; i++){
+               let layer = new JSMatrix(schematic[i + 1], schematic[i] + 1);
+               let column_vectors = [];
+
+               for (let j = 0; j < layer.dim()[1]; j++){
+                    let vector = this.read_data_line(data).trim().split(' ');
+                    for (let k = 0; k < vector.length; k++){
+                         vector[k] = parseFloat(vector[k]);
+                    }
+
+                    let col = new JSVector(vector);
+                    column_vectors.push(col);
+               }
+
+               layer.set_columns(column_vectors);
+               layers.push(layer);
+          }
+
+          this.m_layers = layers;
+
+          this.read_pointer = 0;
+
+          console.log('Loading Complete!');
      }
 
      static tanh(x){
