@@ -50,7 +50,7 @@ function setup() {
           let layer = [];
 
           for (let j = 0; j < 16; j++){
-               layer.push(new Node(0, createVector(1000 + (i * 200), Math.floor((windowHeight - 635) / 2) + 18 + (j * 40))));
+               layer.push(new Node('', createVector(1000 + (i * 200), Math.floor((windowHeight - 635) / 2) + 18 + (j * 40))));
           }
 
           node_layers.push(layer);
@@ -58,7 +58,7 @@ function setup() {
 
      let layer = [];
      for (let i = 0; i < 10; i++){
-          layer.push(new Node(0, createVector(1400, Math.floor((windowHeight - 395) / 2) + 18 + (i * 40))));
+          layer.push(new Node('', createVector(1400, Math.floor((windowHeight - 395) / 2) + 18 + (i * 40))));
      }
      node_layers.push(layer);
 }
@@ -167,7 +167,7 @@ function draw() {
           if (dist < 0.1){
                anim_state = 3;
 
-               let image_data = set[cur_image * 2];
+               let image_data = set[cur_image * 2].clone();
                image_data.get(0).m_vector.push(1);
 
                layer1_line_values = nn.m_layers[0].clone();
@@ -202,10 +202,18 @@ function draw() {
           draw_pixels();
           draw_pixels_value();
           draw_node_layers();
+          draw_node_values();
 
           draw_and_move_node_lines();
 
           if (lines_at_end()){
+               let row_sum = 0;
+               for (let i = 0; i < layer1_line_values.dim()[1]; i++){
+                    row_sum += layer1_line_values.get(i).get(current_node);
+               }
+
+               node_layers[0][current_node].value = round(row_sum * 100) / 100;
+
                current_node++;
 
                if(current_node != 16){
@@ -234,8 +242,50 @@ function draw() {
                }
                else {
                     anim_state = 4;
+
+                    for (let i = 0; i < image_pixels.length; i++){
+                         image_pixels[i].target = image_pixels[i].pos1;
+                         image_pixels[i].target_colour = image_pixels[i].value;
+                    }
+
+                    timer = 120;
                }
           }
+     }
+     else if (anim_state == 4) {
+          draw_pixels();
+          draw_pixels_value();
+          draw_node_layers();
+          draw_node_values();
+          move_pixels();
+
+          if (timer <= 0){
+               anim_state = 5;
+
+               let values = nn.feed_forward(set[cur_image * 2]);
+               let layer_values = values[1].map(NeuralNetBase.tanh).get(0);
+
+               for (let i = 0; i < node_layers[0].length; i++){
+                    node_layers[0][i].value = floor(layer_values.get(i) * 100) / 100;
+                    node_layers[0][i].colour = color(107, 156, 234);
+               }
+
+               timer = 60;
+          }
+
+          timer--;
+     }
+     else if (anim_state == 5){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 6;
+               timer = 0;
+          }
+
+          timer--;
      }
 }
 function draw_image_box(){
@@ -270,9 +320,11 @@ function draw_node_layers(){
           }
      }
 }
-function draw_node_value(n){
-     for (let i = 0; i < node_layers[n].length; i++){
-          node_layers[n][i].draw_value();
+function draw_node_values(){
+     for (let i = 0; i < node_layers.length; i++){
+          for (let j = 0; j < node_layers[i].length; j++){
+               node_layers[i][j].draw_value();
+          }
      }
 }
 function draw_and_move_node_lines(){
@@ -283,7 +335,7 @@ function draw_and_move_node_lines(){
 }
 function lines_at_end(){
      for (let i = 0; i < node_lines.length; i++){
-          if (node_lines[i].tail.dist(node_lines[i].end) > 1)
+          if (node_lines[i].tail.dist(node_lines[i].end) > 12)
                return false;
      }
 
@@ -341,11 +393,12 @@ class Node{
      constructor(value, pos){
           this.pos = pos;
           this.value = value;
+          this.colour = 255;
      }
 
      draw(){
           stroke(0);
-          fill(255);
+          fill(this.colour);
           ellipse(this.pos.x, this.pos.y, 35, 35);
      }
      draw_value(){
@@ -363,7 +416,7 @@ class Line{
           this.tail = start;
           this.max_length = max_length;
           this.length = 0;
-          this.speed = 0.01;
+          this.speed = 0.03;
           this.reached_end = false;
           this.value = 0;
      }
@@ -376,7 +429,7 @@ class Line{
                this.tip = p5.Vector.add(this.tip, dir);
                this.length = this.tip.dist(this.tail);
           }
-          else if (this.length > this.max_length && this.tip.dist(this.end) > 1 && !this.reached_end){
+          else if (this.length > this.max_length && this.tip.dist(this.end) > 12 && !this.reached_end){
                let dir = p5.Vector.sub(this.end, this.start);
                dir = p5.Vector.mult(dir, this.speed);
 
@@ -385,7 +438,7 @@ class Line{
 
                this.length = this.tip.dist(this.tail);
           }
-          else if(this.tail.dist(this.end) > 1) {
+          else if(this.tail.dist(this.end) > 12) {
                let dir = p5.Vector.sub(this.end, this.start);
                dir = p5.Vector.mult(dir, this.speed);
 
