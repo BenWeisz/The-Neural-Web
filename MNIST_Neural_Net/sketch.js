@@ -131,12 +131,25 @@ function mousePressed(){
 
      for (let i = 0; i < image_pixels.length; i++){
           image_pixels[i].set_value(Math.ceil(image[i]));
+          image_pixels[i].target = image_pixels[i].pos2;
+          image_pixels[i].pos = image_pixels[i].pos1;
      }
 
      image_loaded = true;
 
      c++;
      anim_state = 0;
+
+     for (let i = 0; i < 3; i++){
+          for (let j = 0; j < node_layers[i].length; j++){
+               node_layers[i][j].value = '';
+               node_layers[i][j].colour = 255;
+          }
+     }
+
+     current_node = 0;
+
+     node_lines = [];
 }
 function draw() {
      background(255);
