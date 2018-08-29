@@ -16,6 +16,8 @@ var cur_image = 0;
 var node_lines = [];
 var current_node = 0;
 var layer1_line_values;
+var layer2_line_values;
+var layer3_line_values;
 
 function preload(){
      layers_data = loadStrings('mnist_tanh_90.txt');
@@ -123,14 +125,18 @@ function grab_image(index){
      return image_array;
 }
 
+var c = 0;
 function mousePressed(){
-     image = grab_image(0);
+     image = grab_image(c);
 
      for (let i = 0; i < image_pixels.length; i++){
           image_pixels[i].set_value(Math.ceil(image[i]));
      }
 
      image_loaded = true;
+
+     c++;
+     anim_state = 0;
 }
 function draw() {
      background(255);
@@ -190,9 +196,9 @@ function draw() {
                for (let y = 0; y < 28; y++){
                     for (let x = 0; x < 28; x++){
                          let node_line = new Line(createVector(112 + (x * 26) - 27, image_top_transformed + 12 + (y * 26)), createVector(1000, Math.floor((windowHeight - 635) / 2) + 18 + (current_node * 40)), 100);
-                         if (layer1_line_values.get(x).get(y) < 0)
-                              node_line.value = color((layer1_line_values.get(x).get(y) / min) * 255, 0, 0);
-                         else node_line.value = color(0, (layer1_line_values.get(x).get(y) / max) * 255, 0);
+                         if (layer1_line_values.get(x + (y * 28)).get(current_node) < 0)
+                              node_line.value = color((layer1_line_values.get(x + (y * 28)).get(current_node) / min) * 255, 0, 0);
+                         else node_line.value = color(0, (layer1_line_values.get(x + (y* 28)).get(current_node) / max) * 255, 0);
                          node_lines.push(node_line);
                     }
                }
@@ -233,9 +239,9 @@ function draw() {
                     for (let y = 0; y < 28; y++){
                          for (let x = 0; x < 28; x++){
                               let node_line = new Line(createVector(112 + (x * 26) - 27, image_top_transformed + 12 + (y * 26)), createVector(1000, Math.floor((windowHeight - 635) / 2) + 18 + (current_node * 40)), 100);
-                              if (layer1_line_values.get(x).get(y) < 0)
-                                   node_line.value = color((layer1_line_values.get(x).get(y) / min) * 255, 0, 0);
-                              else node_line.value = color(0, (layer1_line_values.get(x).get(y) / max) * 255, 0);
+                              if (layer1_line_values.get(x + (y * 28)).get(current_node) < 0)
+                                   node_line.value = color((layer1_line_values.get(x + (y * 28)).get(current_node) / min) * 255, 0, 0);
+                              else node_line.value = color(0, (layer1_line_values.get(x + (y * 28)).get(current_node) / max) * 255, 0);
                               node_lines.push(node_line);
                          }
                     }
@@ -283,9 +289,273 @@ function draw() {
           if (timer <= 0){
                anim_state = 6;
                timer = 0;
+
+               current_node = 0;
+               node_lines = [];
+
+               let in_data = nn.feed_forward(set[cur_image * 2])[1];
+               in_data = in_data.map(NeuralNetBase.tanh);
+               in_data.get(0).m_vector.push(1);
+
+               layer2_line_values = nn.m_layers[1].clone();
+               for (let i = 0; i < layer2_line_values.dim()[1]; i++){
+                    layer2_line_values.set(i, layer2_line_values.get(i).mul(in_data.get(0).get(i)));
+               }
+
+               let min = 0;
+               let max = 0;
+               for (let i = 0; i < layer2_line_values.dim()[1]; i++){
+                    for (let j = 0; j < layer2_line_values.dim()[0]; j++){
+                         if (layer2_line_values.get(i).get(j) > max)
+                              max = layer2_line_values.get(i).get(j);
+                         if (layer2_line_values.get(i).get(j) < min)
+                              min = layer2_line_values.get(i).get(j);
+                    }
+               }
+
+               for (let y = 0; y < 16; y++){
+                    let node_line = new Line(createVector(1000, Math.floor((windowHeight - 635) / 2) + 18 + (40 * y)), createVector(1200, Math.floor((windowHeight - 635) / 2) + 18 + (current_node * 40)), 100);
+                    if (layer2_line_values.get(y).get(current_node) < 0)
+                         node_line.value = color((layer2_line_values.get(y).get(current_node) / min) * 255, 0, 0);
+                    else node_line.value = color(0, (layer2_line_values.get(y).get(current_node) / max) * 255, 0);
+                    node_lines.push(node_line);
+               }
           }
 
           timer--;
+     }
+     else if (anim_state == 6){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          draw_and_move_node_lines();
+
+          if (lines_at_end()){
+               let row_sum = 0;
+               for (let i = 0; i < layer2_line_values.dim()[1]; i++){
+                    row_sum += layer2_line_values.get(i).get(current_node);
+               }
+
+               node_layers[1][current_node].value = round(row_sum * 100) / 100;
+
+               current_node++;
+
+               if(current_node != 16){
+                    let min = 0;
+                    let max = 0;
+                    for (let i = 0; i < layer2_line_values.dim()[1]; i++){
+                         for (let j = 0; j < layer2_line_values.dim()[0]; j++){
+                              if (layer2_line_values.get(i).get(j) > max)
+                                   max = layer2_line_values.get(i).get(j);
+                              if (layer2_line_values.get(i).get(j) < min)
+                                   min = layer2_line_values.get(i).get(j);
+                         }
+                    }
+
+                    node_lines = [];
+                    for (let y = 0; y < 16; y++){
+                         let node_line = new Line(createVector(1000, Math.floor((windowHeight - 635) / 2) + 18 + (40 * y)), createVector(1200, Math.floor((windowHeight - 635) / 2) + 18 + (current_node * 40)), 100);
+                         if (layer2_line_values.get(y).get(current_node) < 0)
+                              node_line.value = color((layer2_line_values.get(y).get(current_node) / min) * 255, 0, 0);
+                         else node_line.value = color(0, (layer2_line_values.get(y).get(current_node) / max) * 255, 0);
+                         node_lines.push(node_line);
+                    }
+               }
+               else {
+                    anim_state = 7;
+                    timer = 120;
+               }
+          }
+     }
+     else if (anim_state == 7) {
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 8;
+
+               let values = nn.feed_forward(set[cur_image * 2]);
+               let layer_values = values[2].map(NeuralNetBase.tanh).get(0);
+
+               for (let i = 0; i < node_layers[1].length; i++){
+                    node_layers[1][i].value = floor(layer_values.get(i) * 100) / 100;
+                    node_layers[1][i].colour = color(107, 156, 234);
+               }
+
+               timer = 60;
+          }
+
+          timer--;
+     }
+     else if (anim_state == 8){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 9;
+               timer = 0;
+
+               current_node = 0;
+               node_lines = [];
+
+               let in_data = nn.feed_forward(set[cur_image * 2])[2];
+               in_data = in_data.map(NeuralNetBase.tanh);
+               in_data.get(0).m_vector.push(1);
+
+               layer3_line_values = nn.m_layers[2].clone();
+               for (let i = 0; i < layer3_line_values.dim()[1]; i++){
+                    layer3_line_values.set(i, layer3_line_values.get(i).mul(in_data.get(0).get(i)));
+               }
+
+               let min = 0;
+               let max = 0;
+               for (let i = 0; i < layer3_line_values.dim()[1]; i++){
+                    for (let j = 0; j < layer3_line_values.dim()[0]; j++){
+                         if (layer3_line_values.get(i).get(j) > max)
+                              max = layer3_line_values.get(i).get(j);
+                         if (layer3_line_values.get(i).get(j) < min)
+                              min = layer3_line_values.get(i).get(j);
+                    }
+               }
+
+               for (let y = 0; y < 16; y++){
+                    let node_line = new Line(createVector(1200, Math.floor((windowHeight - 635) / 2) + 18 + (40 * y)), createVector(1400, Math.floor((windowHeight - 395) / 2) + 18 + (current_node * 40)), 100);
+                    if (layer3_line_values.get(y).get(current_node) < 0)
+                         node_line.value = color((layer3_line_values.get(y).get(current_node) / min) * 255, 0, 0);
+                    else node_line.value = color(0, (layer3_line_values.get(y).get(current_node) / max) * 255, 0);
+                    node_lines.push(node_line);
+               }
+          }
+
+          timer--;
+     }
+     else if (anim_state == 9){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          draw_and_move_node_lines();
+
+          if (lines_at_end()){
+               let row_sum = 0;
+               for (let i = 0; i < layer3_line_values.dim()[1]; i++){
+                    row_sum += layer3_line_values.get(i).get(current_node);
+               }
+
+               node_layers[2][current_node].value = round(row_sum * 100) / 100;
+
+               current_node++;
+
+               if(current_node != 10){
+                    let min = 0;
+                    let max = 0;
+                    for (let i = 0; i < layer3_line_values.dim()[1]; i++){
+                         for (let j = 0; j < layer3_line_values.dim()[0]; j++){
+                              if (layer3_line_values.get(i).get(j) > max)
+                                   max = layer3_line_values.get(i).get(j);
+                              if (layer3_line_values.get(i).get(j) < min)
+                                   min = layer3_line_values.get(i).get(j);
+                         }
+                    }
+
+                    node_lines = [];
+                    for (let y = 0; y < 16; y++){
+                         let node_line = new Line(createVector(1200, Math.floor((windowHeight - 635) / 2) + 18 + (40 * y)), createVector(1400, Math.floor((windowHeight - 395) / 2) + 18 + (current_node * 40)), 100);
+                         if (layer3_line_values.get(y).get(current_node) < 0)
+                              node_line.value = color((layer3_line_values.get(y).get(current_node) / min) * 255, 0, 0);
+                         else node_line.value = color(0, (layer3_line_values.get(y).get(current_node) / max) * 255, 0);
+                         node_lines.push(node_line);
+                    }
+               }
+               else {
+                    anim_state = 10;
+                    timer = 120;
+               }
+          }
+     }
+     else if(anim_state == 10){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 11;
+
+               let values = nn.feed_forward(set[cur_image * 2]);
+               let layer_values = values[3].map(NeuralNetBase.tanh).get(0);
+
+               for (let i = 0; i < node_layers[2].length; i++){
+                    node_layers[2][i].value = floor(layer_values.get(i) * 100) / 100;
+                    node_layers[2][i].colour = color(107, 156, 234);
+               }
+
+               timer = 60;
+          }
+
+          timer--;
+     }
+     else if (anim_state == 11){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 12;
+
+               let label = 0;
+               for (let i = 0; i < 10; i++){
+                    if (set[(cur_image * 2) + 1].get(0).get(i) == 1){
+                         label = i;
+                         break;
+                    }
+               }
+
+               let output = nn.feed_forward(set[cur_image * 2])[3];
+               output = output.map(NeuralNetBase.tanh).get(0).m_vector;
+
+               let max = -2;
+               let guess = 0;
+               for (let i = 0; i < 10; i++){
+                    if (output[i] > max){
+                         guess = i;
+                         max = output[i];
+                    }
+               }
+
+               let evaluation;
+               if (label != guess)
+                    evaluation = color(237, 23, 23);
+               else evaluation = color(1, 186, 32);
+
+               node_layers[2][guess].colour = evaluation;
+
+               timer = 60;
+          }
+
+          timer--;
+     }
+     else if (anim_state == 12){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
+
+          if (timer <= 0){
+               anim_state = 13;
+
+               for (let i = 0; i < 10; i++){
+                    node_layers[2][i].value = i;
+               }
+          }
+
+          timer--;
+     }
+     else if (anim_state == 13){
+          draw_pixels();
+          draw_node_layers();
+          draw_node_values();
      }
 }
 function draw_image_box(){
