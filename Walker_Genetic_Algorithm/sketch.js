@@ -67,6 +67,18 @@ function draw() {
      fill(100, 200, 100);
      ellipse(end.x, end.y, 10, 10);
 
+     if (mouseIsPressed) {
+          console.alert("asdf");
+          if (mouseX > start.x - 20 && mouseX < start.x + 20 && mouseY > start.y - 20 && mouseY < start.x + 20){
+               start.x = mouseX;
+               start.y = mouseY;
+          }
+          else if (mouseX > end.x - 20 && mouseX < end.x + 20 && mouseY > end.y - 20 && mouseY < end.x + 20){
+               end.x = mouseX;
+               end.y = mouseY;
+          }
+     }
+
      if(cycle >= generationLength){
           population.naturalSelection();
           population.mate();
