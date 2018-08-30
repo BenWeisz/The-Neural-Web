@@ -68,7 +68,6 @@ function draw() {
      ellipse(end.x, end.y, 10, 10);
 
      if (mouseIsPressed) {
-          console.alert("asdf");
           if (mouseX > start.x - 20 && mouseX < start.x + 20 && mouseY > start.y - 20 && mouseY < start.x + 20){
                start.x = mouseX;
                start.y = mouseY;
