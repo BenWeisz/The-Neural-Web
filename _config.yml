@@ -2,6 +2,7 @@ title: The Neural Web
 author: Ben Weisz
 description: A collection of interactive AI demos, some of which involving neural networks
 github_username:  BenWeisz
+resume: https://google.ca
 
 markdown: kramdown
 theme: minima
